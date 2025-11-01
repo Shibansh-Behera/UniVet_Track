@@ -91,13 +91,40 @@ const UserPage = () => {
         ></textarea>
 
         <label>Location:</label>
-        <input
-          type="text"
-          name="location"
-          placeholder="Enter or paste location link"
-          onChange={handleChange}
-          required
-        />
+<div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+  <input
+    type="text"
+    name="location"
+    placeholder="Enter or paste location link"
+    value={formData.location}
+    onChange={handleChange}
+    required
+  />
+  <button
+    type="button"
+    onClick={() => {
+      if (!navigator.geolocation) {
+        alert("❌ Geolocation is not supported by your browser.");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+          setFormData((prev) => ({ ...prev, location: mapsLink }));
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          alert("❌ Unable to fetch location. Please enter manually.");
+        }
+      );
+    }}
+  >
+    📍 Use My Location
+  </button>
+</div>
+
 
         <label>Upload Photo:</label>
         <input type="file" name="photo" accept="image/*" onChange={handleChange} required />
