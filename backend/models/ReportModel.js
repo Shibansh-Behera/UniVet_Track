@@ -1,29 +1,32 @@
+// backend/models/ReportModel.js
 import mongoose from "mongoose";
 
 const reportSchema = new mongoose.Schema({
   reporterName: String,
   contactNumber: String,
-  category: String,  // e.g., dog, cat, bird
-  color: String,
+  category: { type: String, required: true },
   description: String,
   photoUrl: String,
-  location: {
-    latitude: Number,
-    longitude: Number
-  },
   status: {
     type: String,
-    enum: ["yet to be picked", "picked up", "in treatment", "treated"],
-    default: "yet to be picked"
+    enum: ["Yet to be picked up", "Picked up", "In treatment", "Treatment done"],
+    default: "Yet to be picked up",
+  },
+  location: {
+    type: { type: String, enum: ["Point"], required: true },
+    coordinates: { type: [Number], required: true }, // [lon, lat]
   },
   history: [
     {
+      location: {
+        type: { type: String, enum: ["Point"], default: "Point" },
+        coordinates: [Number],
+      },
       timestamp: { type: Date, default: Date.now },
-      latitude: Number,
-      longitude: Number
-    }
+    },
   ],
-  createdAt: { type: Date, default: Date.now }
-});
+}, { timestamps: true });
+
+reportSchema.index({ location: "2dsphere" });
 
 export default mongoose.model("Report", reportSchema);

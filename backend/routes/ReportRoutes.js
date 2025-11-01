@@ -1,9 +1,18 @@
 import express from "express";
-import { reportAnimal, getReportStatus } from "../controllers/ReportController.js";
+import {
+  createOrUpdateReport,
+  getReports,
+  getNearbyReports,
+  markReportAsSeen, // ⬅️ Add this
+} from "../controllers/ReportController.js";
 
 const router = express.Router();
 
-router.post("/report", reportAnimal);
-router.get("/status", getReportStatus);
+router.post("/report", createOrUpdateReport);
+router.get("/", getReports);
+router.get("/nearby", getNearbyReports);
+
+// ✅ New route
+router.patch("/:id/mark-seen", markReportAsSeen);
 
 export default router;

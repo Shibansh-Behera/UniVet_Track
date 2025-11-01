@@ -1,9 +1,20 @@
 import express from "express";
-import { getAllReports, updateReportStatus } from "../controllers/AdminController.js";
+import {
+  getAllReports,
+  deleteReport,
+  updateReportStatus,
+} from "../controllers/AdminController.js";
+import { verifyAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.get("/reports", getAllReports);
-router.put("/report/:id/status", updateReportStatus);
+// 🧾 Fetch all reports
+router.get("/reports", verifyAdmin, getAllReports);
+
+// 🗑️ Delete report
+router.delete("/reports/:id", verifyAdmin, deleteReport);
+
+// ✅ Update report status
+router.put("/reports/:id/status", verifyAdmin, updateReportStatus);
 
 export default router;

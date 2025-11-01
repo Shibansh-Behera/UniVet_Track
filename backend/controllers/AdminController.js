@@ -1,27 +1,69 @@
 import Report from "../models/ReportModel.js";
 
-// 📋 List All Reports with Filters
+// 🧾 Get all reports (with optional filters)
 export const getAllReports = async (req, res) => {
   try {
     const { status, category } = req.query;
     const filter = {};
     if (status) filter.status = status;
     if (category) filter.category = category;
-    const reports = await Report.find(filter).sort({ createdAt: -1 });
-    res.json(reports);
+
+    const reports = await Report.find(filter)
+      .populate("user", "name email")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, reports });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// 🔄 Update Status
+// 🗑️ Delete report
+export const deleteReport = async (req, res) => {
+  try {
+    const report = await Report.findByIdAndDelete(req.params.id);
+    if (!report) {
+      return res.status(404).json({ success: false, message: "Report not found" });
+    }
+    res.status(200).json({ success: true, message: "Report deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ✅ Update report status (Admin only)
 export const updateReportStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const updated = await Report.findByIdAndUpdate(id, { status }, { new: true });
-    res.json({ message: "Status updated", updated });
+
+    const allowedStatuses = [
+      "Yet to be picked",
+      "Picked up",
+      "In treatment",
+      "Treatment done",
+    ];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status value" });
+    }
+
+    const updated = await Report.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    ).populate("user", "name email");
+
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "Report not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Report status updated successfully",
+      report: updated,
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };

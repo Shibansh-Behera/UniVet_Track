@@ -2,19 +2,23 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db.js";
+import userRoutes from "./routes/UserRoutes.js";
 import reportRoutes from "./routes/ReportRoutes.js";
 import adminRoutes from "./routes/AdminRoutes.js";
+import adminReportRoutes from "./routes/AdminRoutes.js";
 
 dotenv.config();
 connectDB();
 
 const app = express();
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
-// Routes
-app.use("/api/reports", reportRoutes);
+app.get("/", (req, res) => res.send("🐾 Animal Rescue API Running..."));
+app.use("/api/admin/reports", adminReportRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/reports", reportRoutes);
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
