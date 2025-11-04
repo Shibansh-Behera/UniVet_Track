@@ -2,15 +2,15 @@ import express from "express"
 import { getAllReports, deleteReport, updateReportStatus } from "../controllers/AdminController.js"
 import { verifyAdmin } from "../middleware/authMiddleware.js"
 
-const router = express.Router()
+const adminRouter = express.Router()
 
 // Fetch all reports
-router.get("/reports", verifyAdmin, getAllReports)
+adminRouter.get("/reports", verifyAdmin, getAllReports)
 
 // Delete report
-router.delete("/reports/:id", verifyAdmin, deleteReport)
+adminRouter.delete("/reports/:id", verifyAdmin, deleteReport)
 
 // Update report status
-router.put("/reports/:id/status", verifyAdmin, updateReportStatus)
+adminRouter.put("/reports/:id/status", verifyAdmin, updateReportStatus)
 
-export default router
+export default adminRouter
