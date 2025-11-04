@@ -8,13 +8,13 @@ import { verifyAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// 🧾 Fetch all reports
+// Fetch all reports
 router.get("/reports", verifyAdmin, getAllReports);
 
-// 🗑️ Delete report
+// Delete report
 router.delete("/reports/:id", verifyAdmin, deleteReport);
 
-// ✅ Update report status
+// Update report status
 router.put("/reports/:id/status", verifyAdmin, updateReportStatus);
 
 export default router;
