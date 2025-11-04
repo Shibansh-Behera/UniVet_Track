@@ -5,11 +5,11 @@ import { verifyUserToken } from "../middleware/authMiddleware.js"
 const reportRouter = express.Router()
 
 reportRouter.post("/report", verifyUserToken, createOrUpdateReport)
-reportRouter.get("/", verifyUserTokengetReports)
-reportRouter.get("/nearby", verifyUserTokengetNearbyReports) 
+reportRouter.get("/", verifyUserToken, getReports)
+reportRouter.get("/nearby", verifyUserToken, getNearbyReports) 
 reportRouter.get("/my-reports", verifyUserToken, getMyReports)
 
 // New route
-reportRouter.patch("/:id/mark-seen", verifyUserTokenmarkReportAsSeen)
+reportRouter.patch("/:id/mark-seen", verifyUserToken, markReportAsSeen)
 
 export default reportRouter 
