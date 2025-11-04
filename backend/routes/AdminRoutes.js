@@ -1,16 +1,21 @@
-import express from "express"
-import { getAllReports, deleteReport, updateReportStatus } from "../controllers/AdminController.js"
-import { verifyAdmin } from "../middleware/authMiddleware.js"
+// backend/routes/AdminRoutes.js
+import express from "express";
+import {
+  getAllReports,
+  deleteReport,
+  updateReportStatus,
+} from "../controllers/AdminController.js";
+import { verifyAdmin } from "../middleware/authMiddleware.js";
 
-const adminRouter = express.Router()
+const router = express.Router();
 
-// Fetch all reports
-adminRouter.get("/reports", verifyAdmin, getAllReports)
+// 🧾 Fetch all reports
+router.get("/reports", verifyAdmin, getAllReports);
 
-// Delete report
-adminRouter.delete("/reports/:id", verifyAdmin, deleteReport)
+// 🗑️ Delete report
+router.delete("/reports/:id", verifyAdmin, deleteReport);
 
-// Update report status
-adminRouter.put("/reports/:id/status", verifyAdmin, updateReportStatus)
+// ✅ Update report status
+router.put("/reports/:id/status", verifyAdmin, updateReportStatus);
 
-export default adminRouter
+export default router;

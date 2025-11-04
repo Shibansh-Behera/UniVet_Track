@@ -1,13 +1,13 @@
-import User from "../models/UserModel.js"
-import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken"
+import User from "../models/UserModel.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 // Helper function to generate token
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" })
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 
-// Register User
+// ✅ Register User
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -41,7 +41,7 @@ export const registerUser = async (req, res) => {
   }
 };
 
-// Login User
+// ✅ Login User
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;

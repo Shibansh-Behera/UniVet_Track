@@ -1,30 +1,26 @@
-import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import HomePage from "./Pages/HomePage";
-// import UserLogin from "./Pages/UserLogin";
-// import AdminLogin from "./Pages/AdminLogin";
-import UserHome from "./Pages/UserHome";
-import ReportAnimal from "./Pages/ReportPage";
-import TrackStatus from "./Pages/TrackPage";
-import UserLoginPage from "./Pages/UserLoginPage";
-import AdminLoginPage from "./Pages/AdminLoginPage";  
-import AdminPage from "./Pages/AdminPage"
+import ReportForm from "./pages/ReportForm";
+import TrackStatus from "./pages/TrackStatus";
+import AdminDashboard from "./pages/AdminDashboard";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import AdminLogin from "./pages/AdminLogin";
+import Navbar from "./components/Navbar";
 
 function App() {
   return (
     <Router>
+      <Navbar />
       <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/user-login" element={<UserLoginPage />} />
-        <Route path="/admin-login" element={<AdminLoginPage />} />
-        
-
-        {/* User protected routes */}
-        <Route path="/admin-page" element={<AdminPage />} />
-        <Route path="/user-home" element={<UserHome />} />
-        <Route path="/report" element={<ReportAnimal />} />
+        {/* User Routes */}
+        <Route path="/" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/report" element={<ReportForm />} />
         <Route path="/track" element={<TrackStatus />} />
+
+        {/* Admin Routes */}
+        <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
       </Routes>
     </Router>
   );

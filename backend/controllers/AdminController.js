@@ -1,24 +1,30 @@
-import Report from "../models/ReportModel.js"
+// backend/controllers/AdminController.js
+import Report from "../models/ReportModel.js";
 
-// Get all reports (with optional filters)
+// 🧾 Get all reported animals (for admin)
 export const getAllReports = async (req, res) => {
   try {
     const { status, category } = req.query;
     const filter = {};
     if (status) filter.status = status;
-    if (category) filter.category = category;
+    if (category && category!="ALL") filter.category = category;
 
     const reports = await Report.find(filter)
-      .populate("user", "name email")
       .sort({ createdAt: -1 });
 
-    res.status(200).json({ success: true, reports });
+    res.status(200).json({
+      success: true,
+      total: reports.length,
+      reports,
+    });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
-
-// Delete report
+// 🗑️ Delete report
 export const deleteReport = async (req, res) => {
   try {
     const report = await Report.findByIdAndDelete(req.params.id);
@@ -31,7 +37,7 @@ export const deleteReport = async (req, res) => {
   }
 };
 
-// Update report status (Admin only)
+// ✅ Update report status (Admin only)
 export const updateReportStatus = async (req, res) => {
   try {
     const { id } = req.params;

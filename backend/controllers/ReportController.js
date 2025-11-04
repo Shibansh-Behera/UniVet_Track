@@ -1,157 +1,172 @@
 // backend/controllers/ReportController.js
 import Report from "../models/ReportModel.js";
-import haversine from "haversine-distance"; // optional, for accurate sorting
+import mongoose from "mongoose";
 
-export const createOrUpdateReport = async (req, res) => {
+/* GET /api/reports/checkExisting?category=Dog&lat=20.30&lng=85.82
+ This is called right after the user fills the form — before deciding whether to create or update.
+If results are shown, the user picks one (based on photo, description, etc).
+*/
+export const checkExistingReports = async (req, res) => {
   try {
-    const { reporterName, contactNumber, category, description, photoUrl, location } = req.body;
-    const forceCreate = req.query.force === "true";
+    const { category, lat, lng } = req.query;
 
-    if (!category || !location?.lat || !location?.lon) {
-      return res.status(400).json({ message: "category and location required" });
-    }
-
-    const lon = parseFloat(location.lon);
-    const lat = parseFloat(location.lat);
-    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
-    const RADIUS_METERS = 1000;
-
-    if (!forceCreate) {
-      // find same category reports in last 3 hours within 1 km
-      const nearbyReports = await Report.find({
-        category,
-        createdAt: { $gte: threeHoursAgo },
-        location: {
-          $nearSphere: {
-            $geometry: { type: "Point", coordinates: [lon, lat] },
-            $maxDistance: RADIUS_METERS,
-          },
-        },
-      });
-
-      // find all category reports (sorted by distance)
-      const allCategoryReports = await Report.aggregate([
-        {
-          $geoNear: {
-            near: { type: "Point", coordinates: [lon, lat] },
-            distanceField: "distanceMeters",
-            spherical: true,
-            query: { category },
-          },
-        },
-        { $sort: { distanceMeters: 1 } },
-      ]);
-
-      if (nearbyReports.length > 0) {
-        return res.status(200).json({
-          duplicatePossible: true,
-          message: "Similar animals found nearby — please check before creating new report",
-          nearbyReports,
-          allCategoryReports,
-        });
-      }
-    }
-
-    // create new report (force=true or no duplicates)
-    const report = new Report({
-      reporterName,
-      contactNumber,
+    const reports = await Report.find({
       category,
-      description,
-      photoUrl,
-      location: { type: "Point", coordinates: [lon, lat] },
-      history: [{ location: { type: "Point", coordinates: [lon, lat] } }],
+      location: {
+        $near: {
+          $geometry: { type: "Point", coordinates: [lng, lat] },
+          $maxDistance: 3000, // within 300 meters
+        },
+      },
+    }).populate("reportedBy", "name email");
+
+    res.status(200).json({
+      success: true,
+      count: reports.length,
+      reports,
     });
-    await report.save();
-
-    res.status(201).json({ duplicatePossible: false, message: "Report created", report });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error", error: err.message });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * Get all reports — optionally filter by category or status
- */
-export const getReports = async (req, res) => {
-  try {
-    const { category, status } = req.query;
-    const filter = {};
-    if (category) filter.category = category;
-    if (status) filter.status = status;
-
-    const reports = await Report.find(filter).sort({ createdAt: -1 });
-    res.json(reports);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
+import Report from "../models/ReportModel.js";
 
 /**
- * Get nearby reports for user — sorted by distance
- * Show all same-category reports, closest ones first
+ * @desc Create a new animal report
+ * @route POST /api/reports/create
+ * @access Protected (User only)
  */
-export const getNearbyReports = async (req, res) => {
+export const createReport = async (req, res) => {
   try {
-    const { lat, lon, category, radius = 5000 } = req.query; // radius in meters
+    const { category, description, photoUrl, latitude, longitude } = req.body;
+    const userId = req.user._id; // from JWT middleware
 
-    if (!lat || !lon) {
-      return res.status(400).json({ message: "Latitude and Longitude are required" });
+    // ✅ Validate essential fields
+    if (!category || !latitude || !longitude) {
+      return res.status(400).json({
+        message: "Category, latitude, and longitude are required.",
+      });
     }
 
-    // Geo query with sorting by distance (MongoDB does this automatically)
-    const query = {
+    // 🐾 Create new report document
+    const newReport = new Report({
+      category,
+      status: "Yet to be picked up",
+      reportedBy: [userId],
+      descriptions: [
+        {
+          text: description || "No description provided",
+          addedBy: userId,
+        },
+      ],
+      photos: photoUrl
+        ? [
+            {
+              url: photoUrl,
+              uploadedBy: userId,
+            },
+          ]
+        : [],
       location: {
-        $nearSphere: {
-          $geometry: { type: "Point", coordinates: [parseFloat(lon), parseFloat(lat)] },
-          $maxDistance: parseInt(radius)
-        }
-      }
-    };
-
-    if (category) query.category = category;
-
-    const reports = await Report.find(query).limit(50);
-
-    return res.status(200).json({
-      count: reports.length,
-      message: `Found ${reports.length} nearby ${category ? category : ""} reports`,
-      reports
+        type: "Point",
+        coordinates: [longitude, latitude],
+      },
+      history: [
+        {
+          location: {
+            type: "Point",
+            coordinates: [longitude, latitude],
+          },
+        },
+      ],
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error", error: err.message });
+
+    await newReport.save();
+
+    res.status(201).json({
+      success: true,
+      message: "New report created successfully.",
+      report: newReport,
+    });
+  } catch (error) {
+    console.error("❌ Error in createReport:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 };
 
-
-export const getMyReports = async (req, res) => {
-  try {
-    const userId = req.user.id; // from JWT
-    const reports = await Report.find({ createdBy: userId }).sort({ createdAt: -1 });
-    res.status(200).json({ reports });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error fetching user reports" });
-  }
-};
-
-
-// Mark a report as resolved
-export const markReportAsSeen = async (req, res) => {
+// PUT /api/reports/update/:id
+export const updateReport = async (req, res) => {
   try {
     const { id } = req.params;
+    const { description, photoUrl, latitude, longitude } = req.body;
+    const userId = req.user._id;
+
     const report = await Report.findById(id);
+    if (!report)
+      return res
+        .status(404)
+        .json({ success: false, message: "Report not found" });
 
-    if (!report) return res.status(404).json({ message: "Report not found" });
+    // 🧠 Push new description
+    if (description) {
+      report.descriptions.push({
+        text: description,
+        addedBy: userId,
+      });
+    }
 
-    report.status = "resolved";
+    // 🖼️ Push new photos
+    if (photoUrl && photoUrl.length > 0) {
+      // photoUrl can be string or array
+      const photosToAdd = Array.isArray(photoUrl) ? photoUrl : [photoUrl];
+      photosToAdd.forEach((url) =>
+        report.photos.push({ url, uploadedBy: userId })
+      );
+    }
+
+    // 🧭 Add to report history (location tracking)
+    if (latitude && longitude) {
+      report.history.push({
+        location: { type: "Point", coordinates: [longitude, latitude] },
+      });
+    }
+
+    // Add this user as a reporter (if not already)
+    if (!report.reportedBy.includes(userId)) {
+      report.reportedBy.push(userId);
+    }
+
     await report.save();
 
-    res.json({ success: true, message: "Report marked as seen/resolved", report });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(200).json({
+      success: true,
+      message: "Report updated successfully",
+      report,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET /api/reports/trackMyStatus
+export const trackMyStatus = async (req, res) => {
+  try {
+    const reports = await Report.find({
+      reportedBy: req.user._id,
+    })
+      .populate("reportedBy", "name email")
+      .sort({ updatedAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      reports,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };

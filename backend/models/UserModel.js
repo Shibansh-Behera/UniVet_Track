@@ -1,27 +1,16 @@
+// backend/models/UserModel.js
 import mongoose from "mongoose";
+const userSchema = new mongoose.Schema({
+  name: String,
+  email: { type: String, unique: true },
+  role: { type: String, enum: ["user", "admin"], default: "user" },
 
-const userSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: [true, "Please enter your name"],
+  reports: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Report",  // <-- connects back to Report model
     },
-    email: {
-      type: String,
-      required: [true, "Please enter your email"],
-      unique: true,
-    },
-    password: {
-      type: String,
-      required: [true, "Please enter your password"],
-    },
-    role: {
-      type: String,
-      enum: ["user", "admin"],
-      default: "user",
-    },
-  },
-  { timestamps: true }
-);
+  ],
+}, { timestamps: true });
 
 export default mongoose.model("User", userSchema);
