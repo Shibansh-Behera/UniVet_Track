@@ -1,6 +1,6 @@
-import Report from "../models/ReportModel.js";
+import Report from "../models/ReportModel.js"
 
-// 🧾 Get all reports (with optional filters)
+// Get all reports (with optional filters)
 export const getAllReports = async (req, res) => {
   try {
     const { status, category } = req.query;
@@ -18,7 +18,7 @@ export const getAllReports = async (req, res) => {
   }
 };
 
-// 🗑️ Delete report
+// Delete report
 export const deleteReport = async (req, res) => {
   try {
     const report = await Report.findByIdAndDelete(req.params.id);
@@ -31,7 +31,7 @@ export const deleteReport = async (req, res) => {
   }
 };
 
-// ✅ Update report status (Admin only)
+// Update report status (Admin only)
 export const updateReportStatus = async (req, res) => {
   try {
     const { id } = req.params;
