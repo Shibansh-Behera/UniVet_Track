@@ -1,13 +1,15 @@
 import express from "express"
-import { createOrUpdateReport, getReports, getNearbyReports, markReportAsSeen } from "../controllers/ReportController.js"
+import { createOrUpdateReport, getReports, getNearbyReports, markReportAsSeen, getMyReports } from "../controllers/ReportController.js"
+import { verifyUserToken } from "../middleware/authMiddleware.js"
 
-const router = express.Router()
+const reportRouter = express.Router()
 
-router.post("/report", createOrUpdateReport)
-router.get("/", getReports)
-router.get("/nearby", getNearbyReports)
+reportRouter.post("/report", verifyUserToken, createOrUpdateReport)
+reportRouter.get("/", verifyUserTokengetReports)
+reportRouter.get("/nearby", verifyUserTokengetNearbyReports) 
+reportRouter.get("/my-reports", verifyUserToken, getMyReports)
 
 // New route
-router.patch("/:id/mark-seen", markReportAsSeen)
+reportRouter.patch("/:id/mark-seen", verifyUserTokenmarkReportAsSeen)
 
-export default router
+export default reportRouter 
