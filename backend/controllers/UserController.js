@@ -66,34 +66,51 @@ export const loginUser = async (req, res) => {
 };
 
 // ✅ Google Login: verify Firebase ID token and issue our JWT
+
 export const googleLogin = async (req, res) => {
   try {
     const { idToken } = req.body;
-    if (!idToken) return res.status(400).json({ message: "idToken is required" });
+    if (!idToken)
+      return res.status(400).json({ message: "idToken is required" });
 
-    // Verify token with Firebase Admin
+    // ✅ Verify token using Firebase Admin
     const decoded = await admin.auth().verifyIdToken(idToken);
-    const { uid, email, name } = {
-      uid: decoded.uid,
-      email: decoded.email,
-      name: decoded.name || decoded.name === "" ? decoded.name : decoded.email?.split("@")[0],
-    };
+    const { uid, email, name } = decoded;
 
-    if (!email) return res.status(400).json({ message: "Email not present in Google account" });
+    if (!email)
+      return res.status(400).json({ message: "Email not present in Google account" });
 
+    // ✅ Check Firestore for user role
+    const roleDoc = await admin.firestore().collection("roles").doc(uid).get();
+    const role = roleDoc.exists ? roleDoc.data().role : "user";
+
+    // ✅ Check MongoDB for user, create if missing
     let user = await User.findOne({ email });
     if (!user) {
-      user = await User.create({ name: name || "User", email, password: "google-auth", role: "user" });
+      user = await User.create({
+        name: name || email.split("@")[0],
+        email,
+        password: "google-auth",
+        role, // use Firestore role
+      });
+    } else {
+      // Update role if changed in Firestore
+      if (user.role !== role) {
+        user.role = role;
+        await user.save();
+      }
     }
 
     res.json({
       _id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role,
+      role,
       token: generateToken(user.id),
     });
   } catch (error) {
+    console.error("Google login error:", error);
     res.status(500).json({ message: error.message });
   }
 };
+

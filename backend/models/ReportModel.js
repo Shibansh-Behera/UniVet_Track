@@ -9,6 +9,13 @@ const reportSchema = new mongoose.Schema(
       enum: ["Dog", "Cat", "Cow", "Bird", "Other"], // optional custom categories
     },
 
+    // 🔗 Optional Firebase UID of the reporting user (for cross-ref)
+    firebaseUid: {
+      type: String,
+      required: false,
+      index: true,
+    },
+
     // ⚙️ Rescue progress status
     status: {
       type: String,

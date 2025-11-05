@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI, {
+    const conn = await mongoose.connect(process.env.REACT_APP_MONGO_URI, {
       dbName: "UniVet_Track",
     });
     console.log(`✅ MongoDB Connected: ${conn.connection.host}, DB: ${conn.connection.name}`);

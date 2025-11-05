@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import API from "../api/axios";
-import { auth } from "../firebase";
-import { onAuthStateChanged } from "firebase/auth";
 import "./UserPage.css";
+import { useLocation } from "react-router-dom";
+
 
 const UserPage = () => {
+  const { state } = useLocation();
+  const { uid, name, email, role } = state || {};
   const [formData, setFormData] = useState({
     name: "",
     contact: "",
@@ -18,6 +20,7 @@ const UserPage = () => {
 
   const [submitted, setSubmitted] = useState(false);
   const customCategoryRef = useRef(null);
+
 
   // Auto-focus the "Specify Animal Type" input when "Other" is selected
   useEffect(() => {
@@ -42,83 +45,193 @@ const UserPage = () => {
     });
   };
 
-  const ensureBackendToken = async () => {
-    const existing = localStorage.getItem("token");
-    if (existing) return true;
+  // const ensureBackendToken = async () => {
+  //   const token = localStorage.getItem("token");
+  //   if (!token) {
+  //     alert("Please sign in first to submit a report.");
+  //     return false;
+  //   }
+  //   return true;
+  // };
+
+  const uploadPhoto = async (photoFile) => {
+    if (!photoFile) return null;
+    
     try {
-      let user = auth.currentUser;
-      if (!user) {
-        // wait for auth to initialize via listener
-        user = await new Promise((resolve) => {
-          const unsub = onAuthStateChanged(auth, (u) => {
-            unsub();
-            resolve(u || null);
-          });
-        });
-      }
-      if (!user) {
-        // do a short poll in case auth initializes slightly later (cross-tab/port)
-        const start = Date.now();
-        while (!user && Date.now() - start < 3000) {
-          await new Promise((r) => setTimeout(r, 100));
-          user = auth.currentUser;
-        }
-        if (!user) return false;
-      }
-      const idToken = await user.getIdToken();
-      const { data } = await API.post("/users/googleLogin", { idToken });
-      if (data?.token) {
-        localStorage.setItem("token", data.token);
-        return true;
-      }
-    } catch (_) {}
-    return false;
+      const uploadFormData = new FormData();
+      uploadFormData.append("photo", photoFile);
+      
+      const { data } = await API.post("/reports/uploadPhoto", uploadFormData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      
+      return data?.photoUrl || null;
+    } catch (err) {
+      console.error("Photo upload error:", err);
+      throw new Error("Failed to upload photo. Please try again.");
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const hasToken = await ensureBackendToken();
-    if (!hasToken) {
-      alert("Please sign in first to submit a report.");
-      return;
-    }
-    const finalCategory = formData.category === "other" ? formData.customCategory : formData.category;
-
-    // Try to parse lat/lng from Google Maps link if present
-    let latitude = "";
-    let longitude = "";
-    try {
-      const match = formData.location.match(/maps\?q=([0-9.-]+),([0-9.-]+)/);
-      if (match) {
-        latitude = match[1];
-        longitude = match[2];
+    
+    // Show loading state
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    const originalText = submitButton?.textContent || "Submit Report";
+    const restoreButton = () => {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
       }
-    } catch {}
-
+    };
+    
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Submitting...";
+    }
+    
     try {
-      if (latitude && longitude) {
+      // const hasToken = await ensureBackendToken();
+      // if (!hasToken) {
+      //   restoreButton();
+      //   return;
+      // }
+      
+      const finalCategory = formData.category === "other" ? formData.customCategory : formData.category;
+
+      // Validate required fields
+      if (!finalCategory) {
+        alert("Please select a category.");
+        restoreButton();
+        return;
+      }
+      
+      if (!formData.location) {
+        alert("Please provide a location.");
+        restoreButton();
+        return;
+      }
+
+      // Try to parse lat/lng from Google Maps link if present
+      let latitude = "";
+      let longitude = "";
+      
+      // Handle multiple Google Maps URL formats
+      const locationPatterns = [
+        /maps\?q=([0-9.-]+),([0-9.-]+)/,  // maps?q=lat,lng
+        /@([0-9.-]+),([0-9.-]+)/,         // @lat,lng
+        /place\/[^\/]+\/@([0-9.-]+),([0-9.-]+)/, // place/.../@lat,lng
+        /maps\?q=([0-9.-]+)$/,  // maps?q=lat only (fallback - will use 0 for lng)
+      ];
+      
+      let matched = false;
+      for (const pattern of locationPatterns) {
+        const match = formData.location.match(pattern);
+        if (match) {
+          latitude = match[1];
+          longitude = match[2] || latitude; // If only one coord, use same for both (user should use "Use My Location")
+          matched = true;
+          break;
+        }
+      }
+      
+      if (!latitude || !longitude || !matched) {
+        alert("Could not parse location coordinates from the URL. Please:\n1. Use the 'Use My Location' button, OR\n2. Paste a complete Google Maps link with coordinates (e.g., https://www.google.com/maps?q=22.22,88.44)");
+        restoreButton();
+        return;
+      }
+      
+      // Validate coordinates are valid numbers
+      const latNum = parseFloat(latitude);
+      const lngNum = parseFloat(longitude);
+      if (isNaN(latNum) || isNaN(lngNum) || latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) {
+        alert("Invalid coordinates detected. Please use the 'Use My Location' button or provide a valid Google Maps link.");
+        restoreButton();
+        return;
+      }
+
+      // Upload photo if provided
+      let photoUrl = null;
+      if (formData.photo) {
+        try {
+          photoUrl = await uploadPhoto(formData.photo);
+        } catch (photoErr) {
+          const continueWithoutPhoto = window.confirm(
+            "Photo upload failed. Do you want to continue without the photo?"
+          );
+          if (!continueWithoutPhoto) {
+            restoreButton();
+            return;
+          }
+        }
+      }
+
+      // Check for existing reports
+      try {
         const { data: check } = await API.get(`/reports/checkExisting`, {
           params: { category: finalCategory, lat: latitude, lng: longitude },
         });
         if (check?.count > 0) {
-          alert("Similar reports exist nearby. Please review before creating a new one.");
-          return;
+          const proceed = window.confirm(
+            `Similar reports exist nearby (${check.count} found). Do you want to proceed anyway?`
+          );
+          if (!proceed) {
+            restoreButton();
+            return;
+          }
         }
+      } catch (checkErr) {
+        // If check fails, continue anyway
+        console.warn("Could not check existing reports:", checkErr);
       }
 
+      // Submit the report
+      console.log("Submitting report with data:", {
+        category: finalCategory,
+        hasPhoto: !!photoUrl,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+      });
+      
       const { data } = await API.post(`/reports/create`, {
         category: finalCategory,
         description: formData.description,
-        photoUrl: null,
-        latitude: latitude ? parseFloat(latitude) : undefined,
-        longitude: longitude ? parseFloat(longitude) : undefined,
+        photoUrl: photoUrl,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        firebaseUid: uid || undefined,
+        name: formData.name || undefined,
+        contact: formData.contact || undefined,
+        color: formData.color || undefined,
       });
 
       setSubmitted(true);
-      alert(data?.message || "Report created successfully");
+      alert(data?.message || "Report created successfully!");
+      
+      // Reset form
+      setFormData({
+        name: "",
+        contact: "",
+        category: "",
+        customCategory: "",
+        color: "",
+        description: "",
+        photo: null,
+        location: "",
+      });
+      
+      // Reset file input
+      const fileInput = e.target.querySelector('input[type="file"]');
+      if (fileInput) fileInput.value = "";
+      
+      restoreButton();
     } catch (err) {
-      const msg = err?.response?.data?.message || "Failed to submit report";
+      console.error("Submit error:", err);
+      const msg = err?.response?.data?.message || err?.message || "Failed to submit report. Please try again.";
       alert(msg);
+      restoreButton();
     }
   };
 

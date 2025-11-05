@@ -1,6 +1,8 @@
 // backend/controllers/ReportController.js
 import Report from "../models/ReportModel.js";
 import mongoose from "mongoose";
+import cloudinary from "../utils/cloudinary.js";
+import { Readable } from "stream";
 
 /* GET /api/reports/checkExisting?category=Dog&lat=20.30&lng=85.82
  This is called right after the user fills the form — before deciding whether to create or update.
@@ -31,13 +33,61 @@ export const checkExistingReports = async (req, res) => {
 };
 
 /**
+ * @desc Upload photo to Cloudinary
+ * @route POST /api/reports/uploadPhoto
+ * @access Protected (User only)
+ */
+export const uploadPhoto = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No photo file provided" });
+    }
+
+    // Convert buffer to stream for Cloudinary
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: "animal_reports",
+        resource_type: "image",
+      },
+      (error, result) => {
+        if (error) {
+          console.error("Cloudinary upload error:", error);
+          return res.status(500).json({
+            success: false,
+            message: "Failed to upload photo",
+            error: error.message,
+          });
+        }
+        res.status(200).json({
+          success: true,
+          photoUrl: result.secure_url,
+        });
+      }
+    );
+
+    // Convert buffer to stream
+    const bufferStream = new Readable();
+    bufferStream.push(req.file.buffer);
+    bufferStream.push(null);
+    bufferStream.pipe(stream);
+  } catch (error) {
+    console.error("❌ Error in uploadPhoto:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+/**
  * @desc Create a new animal report
  * @route POST /api/reports/create
  * @access Protected (User only)
  */
 export const createReport = async (req, res) => {
   try {
-    const { category, description, photoUrl, latitude, longitude } = req.body;
+    const { category, description, photoUrl, latitude, longitude, name, contact, color, firebaseUid } = req.body;
     const userId = req.user._id; // from JWT middleware
 
     // ✅ Validate essential fields
@@ -47,14 +97,27 @@ export const createReport = async (req, res) => {
       });
     }
 
+    // Build description with additional info if provided
+    let fullDescription = description || "No description provided";
+    if (color) {
+      fullDescription = `Color: ${color}. ${fullDescription}`;
+    }
+    if (name) {
+      fullDescription = `Reporter: ${name}. ${fullDescription}`;
+    }
+    if (contact) {
+      fullDescription = `Contact: ${contact}. ${fullDescription}`;
+    }
+
     // 🐾 Create new report document
     const newReport = new Report({
       category,
       status: "Yet to be picked up",
+      firebaseUid: firebaseUid || undefined,
       reportedBy: [userId],
       descriptions: [
         {
-          text: description || "No description provided",
+          text: fullDescription,
           addedBy: userId,
         },
       ],

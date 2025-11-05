@@ -5,6 +5,7 @@ import { auth, provider, db } from "../firebase";
 import { signInWithPopup } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
+
 const UserLoginPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -20,7 +21,7 @@ const UserLoginPage = () => {
       const uid = user.uid;
       const name = user.displayName || "";
       const email = user.email || "";
-
+      console.log(uid);
       // Ensure role doc exists with role "user"
       const roleRef = doc(db, "roles", uid);
       const roleSnap = await getDoc(roleRef);
@@ -42,6 +43,7 @@ const UserLoginPage = () => {
       }
 
       const userData = { uid, name, email, role };
+      console.log(userData.uid);
       navigate("/user-home", { state: userData });
     } catch (error) {
       console.error("Error during sign-in:", error);

@@ -11,8 +11,8 @@ const UserHome = () => {
 
   const handleChoice = (option) => {
     setShowPopup(false);
-    if (option === "report") navigate("/report");
-    else navigate("/track");
+    if (option === "report") navigate("/report", { state: { uid, name, email, role } });
+    else navigate("/track", { state: { uid, name, email, role } });
   };
 
   const handleLogout = () => {
