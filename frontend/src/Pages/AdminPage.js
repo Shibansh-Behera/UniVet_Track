@@ -10,14 +10,20 @@ const AdminPage = () => {
   const { uid, name, email, role } = state || {};
 
   const fetchReports = async () => {
-    const res = await API.get("/admin/reports");
-    setReports(res.data);
+    const { data } = await API.get("/admin/reports");
+    setReports(data?.reports || []);
   };
 
   const updateStatus = async (id, newStatus) => {
-    await API.put(`/admin/report/${id}/status`, { status: newStatus });
+    await API.put(`/admin/reports/${id}/status`, { status: newStatus });
     fetchReports();
   };
+  
+  const deleteReport = async (id) => {
+    await API.delete(`/admin/reports/${id}`);
+    fetchReports();
+  };
+  
 
   useEffect(() => {
     fetchReports();
@@ -36,7 +42,7 @@ const AdminPage = () => {
             <p><strong>{r.category}</strong> ({r.color})</p>
             <p>Status: <span className="text-green-600">{r.status}</span></p>
             <div className="mt-2 space-x-2">
-              {["yet to be picked", "picked up", "in treatment", "treated"].map((s) => (
+              {["Yet to be picked", "Picked up", "In treatment", "Treatment done"].map((s) => (
                 <button
                   key={s}
                   onClick={() => updateStatus(r._id, s)}
@@ -45,6 +51,12 @@ const AdminPage = () => {
                   {s}
                 </button>
               ))}
+              <button
+                onClick={() => deleteReport(r._id)}
+                className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Delete
+              </button>
             </div>
           </div>
         ))}

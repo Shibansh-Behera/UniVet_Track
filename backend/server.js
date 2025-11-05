@@ -5,9 +5,24 @@ import connectDB from "./config/db.js";
 import userRoutes from "./routes/UserRoutes.js";
 import reportRoutes from "./routes/ReportRoutes.js";
 import adminRoutes from "./routes/AdminRoutes.js";
+import admin from "firebase-admin";
+import fs from "fs";
 
 dotenv.config();
 connectDB();
+
+// Initialize Firebase Admin if credentials are provided
+try {
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+    const serviceAccount = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS && fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
+    const serviceAccount = JSON.parse(fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS));
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  }
+} catch (e) {
+  console.warn("Firebase Admin not initialized:", e.message);
+}
 
 const app = express();
 app.use(cors());

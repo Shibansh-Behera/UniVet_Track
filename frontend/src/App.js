@@ -1,26 +1,23 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import ReportForm from "./pages/ReportForm";
-import TrackStatus from "./pages/TrackStatus";
-import AdminDashboard from "./pages/AdminDashboard";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import AdminLogin from "./pages/AdminLogin";
-import Navbar from "./components/Navbar";
+import HomePage from "./Pages/HomePage";
+import UserLoginPage from "./Pages/UserLoginPage";
+import AdminLoginPage from "./Pages/AdminLoginPage";
+import UserHome from "./Pages/UserHome";
+import ReportPage from "./Pages/ReportPage";
+import TrackPage from "./Pages/TrackPage";
+import AdminPage from "./Pages/AdminPage";
 
 function App() {
   return (
     <Router>
-      <Navbar />
       <Routes>
-        {/* User Routes */}
-        <Route path="/" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/report" element={<ReportForm />} />
-        <Route path="/track" element={<TrackStatus />} />
-
-        {/* Admin Routes */}
-        <Route path="/admin" element={<AdminLogin />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/user-login" element={<UserLoginPage />} />
+        <Route path="/admin-login" element={<AdminLoginPage />} />
+        <Route path="/user-home" element={<UserHome />} />
+        <Route path="/report" element={<ReportPage />} />
+        <Route path="/track" element={<TrackPage />} />
+        <Route path="/admin-page" element={<AdminPage />} />
       </Routes>
     </Router>
   );

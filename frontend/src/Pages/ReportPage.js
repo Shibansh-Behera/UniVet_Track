@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
+import API from "../api/axios";
+import { auth } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import "./UserPage.css";
 
 const UserPage = () => {
@@ -39,18 +42,84 @@ const UserPage = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const ensureBackendToken = async () => {
+    const existing = localStorage.getItem("token");
+    if (existing) return true;
+    try {
+      let user = auth.currentUser;
+      if (!user) {
+        // wait for auth to initialize via listener
+        user = await new Promise((resolve) => {
+          const unsub = onAuthStateChanged(auth, (u) => {
+            unsub();
+            resolve(u || null);
+          });
+        });
+      }
+      if (!user) {
+        // do a short poll in case auth initializes slightly later (cross-tab/port)
+        const start = Date.now();
+        while (!user && Date.now() - start < 3000) {
+          await new Promise((r) => setTimeout(r, 100));
+          user = auth.currentUser;
+        }
+        if (!user) return false;
+      }
+      const idToken = await user.getIdToken();
+      const { data } = await API.post("/users/googleLogin", { idToken });
+      if (data?.token) {
+        localStorage.setItem("token", data.token);
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const finalCategory =
-      formData.category === "other" ? formData.customCategory : formData.category;
+    const hasToken = await ensureBackendToken();
+    if (!hasToken) {
+      alert("Please sign in first to submit a report.");
+      return;
+    }
+    const finalCategory = formData.category === "other" ? formData.customCategory : formData.category;
 
-    const reportData = { ...formData, category: finalCategory };
-    console.log("Submitted form:", reportData);
+    // Try to parse lat/lng from Google Maps link if present
+    let latitude = "";
+    let longitude = "";
+    try {
+      const match = formData.location.match(/maps\?q=([0-9.-]+),([0-9.-]+)/);
+      if (match) {
+        latitude = match[1];
+        longitude = match[2];
+      }
+    } catch {}
 
-    setSubmitted(true);
-    alert(
-      `✅ Animal report submitted successfully!\nCategory: ${finalCategory}\nStatus: Yet to be picked up`
-    );
+    try {
+      if (latitude && longitude) {
+        const { data: check } = await API.get(`/reports/checkExisting`, {
+          params: { category: finalCategory, lat: latitude, lng: longitude },
+        });
+        if (check?.count > 0) {
+          alert("Similar reports exist nearby. Please review before creating a new one.");
+          return;
+        }
+      }
+
+      const { data } = await API.post(`/reports/create`, {
+        category: finalCategory,
+        description: formData.description,
+        photoUrl: null,
+        latitude: latitude ? parseFloat(latitude) : undefined,
+        longitude: longitude ? parseFloat(longitude) : undefined,
+      });
+
+      setSubmitted(true);
+      alert(data?.message || "Report created successfully");
+    } catch (err) {
+      const msg = err?.response?.data?.message || "Failed to submit report";
+      alert(msg);
+    }
   };
 
   return (

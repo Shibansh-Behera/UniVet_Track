@@ -6,7 +6,7 @@ import {
   updateReport,
   trackMyStatus,
 } from "../controllers/ReportController.js";
-import { verifyUser } from "../middlewares/authMiddleware.js";
+import { verifyUser } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 

@@ -5,17 +5,17 @@ import {
   deleteReport,
   updateReportStatus,
 } from "../controllers/AdminController.js";
-import { verifyAdmin } from "../middleware/authMiddleware.js";
+import { verifyUser, verifyAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // 🧾 Fetch all reports
-router.get("/reports", verifyAdmin, getAllReports);
+router.get("/reports", verifyUser, verifyAdmin, getAllReports);
 
 // 🗑️ Delete report
-router.delete("/reports/:id", verifyAdmin, deleteReport);
+router.delete("/reports/:id", verifyUser, verifyAdmin, deleteReport);
 
 // ✅ Update report status
-router.put("/reports/:id/status", verifyAdmin, updateReportStatus);
+router.put("/reports/:id/status", verifyUser, verifyAdmin, updateReportStatus);
 
 export default router;

@@ -30,8 +30,6 @@ export const checkExistingReports = async (req, res) => {
   }
 };
 
-import Report from "../models/ReportModel.js";
-
 /**
  * @desc Create a new animal report
  * @route POST /api/reports/create
